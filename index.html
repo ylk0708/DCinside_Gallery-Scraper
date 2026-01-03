@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bol Of Fame</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            /* 밝은 배경 */
+            --card-bg: #ffffff;
+            /* 흰색 카드 */
+            --text-main: #1e293b;
+            /* 진한 회색 텍스트 */
+            --text-sub: #64748b;
+            /* 연한 회색 텍스트 */
+            --accent-color: #3b82f6;
+            /* 블루 포인트 */
+            --accent-hover: #2563eb;
+            --border-color: #e2e8f0;
+            /* 연한 테두리 */
+            --glass-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Layout & Container */
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem;
+            width: 100%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        header {
+            margin-bottom: 1.5rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(248, 250, 252, 0.9);
+            /* Light translucent */
+            backdrop-filter: blur(10px);
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .header-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+
+        .total-count {
+            font-size: 0.875rem;
+            color: var(--text-sub);
+            background: #f1f5f9;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+        }
+
+        /* Controls (Search & Filter) */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .search-box {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            background: #ffffff;
+            border: 1px solid var(--border-color);
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 0.75rem;
+            color: var(--text-main);
+            font-size: 1rem;
+            outline: none;
+            transition: all 0.2s;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .search-input:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px var(--accent-color);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-sub);
+            pointer-events: none;
+        }
+
+        .filters {
+            display: flex;
+            gap: 0.5rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            /* for scrollbar space if needed */
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #ffffff;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--border-color);
+            font-size: 0.875rem;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        select {
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: inherit;
+            outline: none;
+            cursor: pointer;
+        }
+
+        select option {
+            background-color: #ffffff;
+            color: var(--text-main);
+        }
+
+        /* Post List */
+        .post-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            flex: 1;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            box-shadow: var(--glass-shadow);
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        .card:active {
+            transform: scale(0.98);
+            background: #f8fafc;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .post-title {
+            font-size: 1rem;
+            font-weight: 600;
+            line-height: 1.4;
+            margin-right: 0.5rem;
+            word-break: break-word;
+            /* 긴 제목 줄바꿈 */
+            color: #334155;
+        }
+
+        .recommend-badge {
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #d97706;
+            /* Darker Amber for light mode */
+            background: #fef3c7;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        .card-meta {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-sub);
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+
+        /* Pagination */
+        .pagination {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 1rem;
+            padding-bottom: 2rem;
+        }
+
+        .page-btn {
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+        }
+
+        .page-btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .page-btn:disabled {
+            background: #e2e8f0;
+            cursor: not-allowed;
+            color: #94a3b8;
+            box-shadow: none;
+        }
+
+        .page-info {
+            font-size: 0.875rem;
+            color: var(--text-sub);
+            font-weight: 500;
+        }
+
+        /* Loading & Empty States */
+        .loading-state,
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-sub);
+        }
+
+        .spinner {
+            width: 2rem;
+            height: 2rem;
+            border: 3px solid #e2e8f0;
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Desktop Tweaks */
+        @media (min-width: 768px) {
+            .controls {
+                flex-direction: row;
+            }
+
+            .search-box {
+                flex: 1;
+            }
+
+            .post-list {
+                display: grid;
+                grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="header-top">
+                <h1>Bol Of Fame</h1>
+                <span class="total-count" id="totalCount">Loading...</span>
+            </div>
+
+            <div class="controls">
+                <div class="search-box">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="searchInput" class="search-input" placeholder="제목 검색...">
+                </div>
+
+                <div class="filters">
+                    <div class="filter-item">
+                        <span>정렬</span>
+                        <select id="sortBy">
+                            <option value="date">최신순</option>
+                            <option value="recommend">추천순</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-item">
+                        <span>최소 추천</span>
+                        <select id="minRecommend">
+                            <option value="0">전체</option>
+                            <option value="100">100+</option>
+                            <option value="200">200+</option>
+                            <option value="300">300+</option>
+                            <option value="500">500+</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main id="postList" class="post-list">
+            <!-- Posts will be injected here -->
+        </main>
+
+        <div class="pagination">
+            <button id="prevBtn" class="page-btn" disabled>이전</button>
+            <span id="pageInfo" class="page-info">1 / 1</span>
+            <button id="nextBtn" class="page-btn" disabled>다음</button>
+        </div>
+    </div>
+
+    <script>
+        // State
+        const state = {
+            allData: [],      // 전체 원본 데이터
+            filteredData: [], // 필터링/정렬된 데이터
+            page: 1,
+            pageSize: 20,
+            sortBy: 'date',
+            minRecommend: 0,
+            searchQuery: ''
+        };
+
+        // DOM Elements
+        const els = {
+            postList: document.getElementById('postList'),
+            totalCount: document.getElementById('totalCount'),
+            searchInput: document.getElementById('searchInput'),
+            sortBy: document.getElementById('sortBy'),
+            minRecommend: document.getElementById('minRecommend'),
+            prevBtn: document.getElementById('prevBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            pageInfo: document.getElementById('pageInfo')
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+            setupListeners();
+        });
+
+        function setupListeners() {
+            // Search (Debounce)
+            let debounceTimer;
+            els.searchInput.addEventListener('input', (e) => {
+                state.searchQuery = e.target.value.toLowerCase().trim();
+                state.page = 1; // Reset page
+                updateView();   // Client-side instant update
+            });
+
+            // Filters
+            els.sortBy.addEventListener('change', (e) => {
+                state.sortBy = e.target.value;
+                state.page = 1;
+                updateView();
+            });
+
+            els.minRecommend.addEventListener('change', (e) => {
+                state.minRecommend = parseInt(e.target.value, 10);
+                state.page = 1;
+                updateView();
+            });
+
+            // Pagination
+            els.prevBtn.addEventListener('click', () => {
+                if (state.page > 1) {
+                    state.page--;
+                    renderCurrentPage();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+
+            els.nextBtn.addEventListener('click', () => {
+                const totalPages = Math.ceil(state.filteredData.length / state.pageSize);
+                if (state.page < totalPages) {
+                    state.page++;
+                    renderCurrentPage();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            });
+        }
+
+        function fetchData() {
+            renderLoading();
+
+            // Call Apps Script Backend (Fetch ALL data once)
+            google.script.run
+                .withSuccessHandler(onSuccess)
+                .withFailureHandler(onFailure)
+                .getData();
+        }
+
+        function onSuccess(items) {
+            console.log('Server response:', items); // 디버깅용 로그
+
+            // 1. 에러 응답 처리
+            if (items && items.error) {
+                console.error('Server reported error:', items.error);
+                els.postList.innerHTML = `
+          <div class="empty-state" style="color: #ef4444;">
+            <p>서버 에러 발생</p>
+            <small>${items.error}</small>
+          </div>
+        `;
+                return;
+            }
+
+            // 2. 구버전 API(Legacy Object) 호환성 처리
+            if (items && !Array.isArray(items) && items.data) {
+                console.warn('Received legacy data format. Adapting...');
+                items = items.data;
+            }
+
+            // 3. Null/Undefined/NotArray 체크
+            if (!items || !Array.isArray(items)) {
+                console.error('Invalid data format:', items);
+                els.postList.innerHTML = `
+          <div class="empty-state">
+            <p>데이터 형식이 올바르지 않습니다.</p>
+            <small>개발자 도구(F12) 콘솔을 확인해주세요.<br>Response: ${JSON.stringify(items)}</small>
+          </div>
+        `;
+                return;
+            }
+
+            state.allData = items;
+
+            // Initial view update
+            updateView();
+        }
+
+        function onFailure(error) {
+            els.postList.innerHTML = `
+        <div class="empty-state">
+          <p>데이터를 불러오는데 실패했습니다.</p>
+          <small>${error.message}</small>
+        </div>
+      `;
+        }
+
+        // Process data (Filter -> Sort -> Paginate)
+        function updateView() {
+            let result = [...state.allData];
+
+            // 1. Filter by Recommend
+            if (state.minRecommend > 0) {
+                result = result.filter(item => item.recommend >= state.minRecommend);
+            }
+
+            // 2. Filter by Search
+            if (state.searchQuery) {
+                result = result.filter(item =>
+                    String(item.title).toLowerCase().includes(state.searchQuery)
+                );
+            }
+
+            // 3. Sort
+            if (state.sortBy === 'recommend') {
+                result.sort((a, b) => b.recommend - a.recommend);
+            } else {
+                // sortBy === 'date' (최신순: 작성일 기준 내림차순)
+                result.sort((a, b) => {
+                    const timeA = parseDateScore(a.date);
+                    const timeB = parseDateScore(b.date);
+                    // 같은 날짜/시간이면 수집일(scrapedAt)로 2차 정렬
+                    if (timeA === timeB) {
+                        return new Date(b.scrapedAt).getTime() - new Date(a.scrapedAt).getTime();
+                    }
+                    return timeB - timeA;
+                });
+            }
+
+            state.filteredData = result;
+
+            // Update Total Count UI
+            els.totalCount.textContent = `${result.length} posts`;
+
+            // Render First Page
+            renderCurrentPage();
+        }
+
+        // Helper to parse DC Inside date format
+        function parseDateScore(dateStr) {
+            if (!dateStr) return 0;
+            dateStr = String(dateStr).trim();
+
+            // 1. "YYYY.MM.DD HH:mm" (New Standard)
+            if (dateStr.includes(' ') && dateStr.includes('.') && dateStr.includes(':')) {
+                const [dStr, tStr] = dateStr.split(' ');
+                const [y, m, d] = dStr.split('.').map(Number);
+                const [h, min] = tStr.split(':').map(Number);
+
+                // 유효성 체크
+                if (!isNaN(y) && !isNaN(m) && !isNaN(d) && !isNaN(h) && !isNaN(min)) {
+                    // 월은 0-based
+                    return new Date(y, m - 1, d, h, min).getTime();
+                }
+            }
+
+            // 2. "HH:MM" format (Today - Legacy/Raw) -> Priority High if no dots
+            if (dateStr.includes(':') && !dateStr.includes('.')) {
+                const [hours, minutes] = dateStr.split(':').map(Number);
+                if (!isNaN(hours) && !isNaN(minutes)) {
+                    const now = new Date();
+                    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hours, minutes);
+                    return d.getTime();
+                }
+            }
+
+            // 3. "YY.MM.DD" or "YYYY.MM.DD" (Date only)
+            if (dateStr.includes('.')) {
+                const parts = dateStr.split('.').map(part => parseInt(part, 10));
+                if (parts.length >= 3) {
+                    let y = parts[0];
+                    const m = parts[1];
+                    const d = parts[2];
+
+                    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+                        // 2자리 연도 처리
+                        if (y < 100) y += 2000;
+                        return new Date(y, m - 1, d).getTime();
+                    }
+                }
+                // (Legacy: MM.DD)
+                if (parts.length === 2) {
+                    const now = new Date();
+                    return new Date(now.getFullYear(), parts[0] - 1, parts[1]).getTime();
+                }
+            }
+
+            return 0;
+        }
+
+        function renderCurrentPage() {
+            const startIndex = (state.page - 1) * state.pageSize;
+            const endIndex = startIndex + state.pageSize;
+            const pageItems = state.filteredData.slice(startIndex, endIndex);
+
+            renderPosts(pageItems);
+            updatePaginationUI();
+        }
+
+        function renderLoading() {
+            els.postList.innerHTML = `
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>전체 데이터를 불러오는 중입니다...<br>(최초 1회만 로딩)</p>
+        </div>
+      `;
+        }
+
+        function renderPosts(posts) {
+            if (!posts || posts.length === 0) {
+                els.postList.innerHTML = `
+          <div class="empty-state">
+            <p>데이터가 없습니다.</p>
+          </div>
+        `;
+                return;
+            }
+
+            els.postList.innerHTML = posts.map(post => `
+        <a href="${post.link}" target="_blank" class="card">
+          <div class="card-header">
+            <div class="post-title">${escapeHtml(post.title)}</div>
+            <div class="recommend-badge">
+              <span>★</span> ${post.recommend}
+            </div>
+          </div>
+          <div class="card-meta">
+            <div class="meta-item">
+              <span>👤</span> ${escapeHtml(post.author)}
+            </div>
+            <div class="meta-item">
+              <span>📅</span> ${formatDate(post.date)}
+            </div>
+          </div>
+        </a>
+      `).join('');
+        }
+
+        function updatePaginationUI() {
+            const totalPages = Math.ceil(state.filteredData.length / state.pageSize) || 1;
+            els.pageInfo.textContent = `${state.page} / ${totalPages}`;
+            els.prevBtn.disabled = state.page <= 1;
+            els.nextBtn.disabled = state.page >= totalPages;
+        }
+
+        // Utils
+        function escapeHtml(text) {
+            if (!text) return '';
+
+            // 1. Decode existing HTML entities (e.g. &#x267f; -> ♿)
+            const decoded = new DOMParser().parseFromString(text, 'text/html').body.textContent || "";
+
+            // 2. Re-escape characters to prevent XSS
+            return decoded
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function formatDate(dateStr) {
+            // 입력이 날짜 객체일 경우 문자열로 변환
+            if (dateStr instanceof Date) {
+                // YYYY-MM-DD 등으로 변환하거나 그냥 toLocaleDateString
+                return dateStr.toLocaleDateString();
+            }
+            return dateStr || '';
+        }
+    </script>
+</body>
+
+</html>
