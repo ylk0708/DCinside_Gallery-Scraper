@@ -13,7 +13,8 @@ const BATCH_CONFIG = {
   LIST_NUM: 100,
   BATCH_SIZE: 50,       // 한 번 실행 시 최대 50페이지씩 끊어서 실행 (시간 초과 방지)
   MIN_RECOMMEND: 100,
-  TARGET_YEAR: 2025     // 수집 목표 연도
+  TARGET_YEAR: 2025,    // 수집 목표 연도
+  BASE_URL: 'https://gall.dcinside.com/mgallery/board/lists/'
 };
 
 function onOpenBatch() {
@@ -56,7 +57,7 @@ function scrapeBatch2025() {
   for (let i = 0; i < BATCH_CONFIG.BATCH_SIZE; i++) {
     if (stopFlag) break;
 
-    const url = `https://gall.dcinside.com/mgallery/board/lists/?id=${BATCH_CONFIG.GALLERY_ID}&list_num=${BATCH_CONFIG.LIST_NUM}&sort_type=N&exception_mode=recommend&search_head=${BATCH_CONFIG.SEARCH_HEAD}&page=${currentPage}`;
+    const url = buildTargetUrl(currentPage);
     
     console.log(`Fetching Batch Page ${currentPage}...`);
     
@@ -262,4 +263,19 @@ function normalizeDate(dateStr) {
   }
   
   return dateStr;
+}
+
+/**
+ * 접속 URL 생성 함수 (배치용)
+ */
+function buildTargetUrl(page) {
+    const params = [
+        `id=${BATCH_CONFIG.GALLERY_ID}`,
+        `list_num=${BATCH_CONFIG.LIST_NUM}`,
+        `sort_type=N`,
+        `exception_mode=recommend`,
+        `search_head=${BATCH_CONFIG.SEARCH_HEAD}`,
+        `page=${page}`
+    ];
+    return `${BATCH_CONFIG.BASE_URL}?${params.join('&')}`;
 }

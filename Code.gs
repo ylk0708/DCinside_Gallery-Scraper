@@ -9,11 +9,12 @@
 // 설정 변수
 const CONFIG = {
   GALLERY_ID: 'rollthechess', // 갤러리 ID
-  SEARCH_HEAD: 40,            // 말머리 (40: 창작)
+  SEARCH_HEAD: 40,            // 말머리 (ex: 40: 창작, 130: 볼문학)
   LIST_NUM: 100,              // 한 페이지당 게시물 수
   START_PAGE: 1,              // 시작 페이지
   MAX_PAGE: 30,               // 최대 스크랩할 페이지 수 (너무 많이 하면 시간이 오래 걸릴 수 있습니다)
-  MIN_RECOMMEND: 100          // 최소 추천 수
+  MIN_RECOMMEND: 100,         // 최소 추천 수
+  BASE_URL: 'https://gall.dcinside.com/mgallery/board/lists/' // 대상 URL (마이너 갤러리 기준)
 };
 
 /**
@@ -109,7 +110,7 @@ function scrapeDCInside() {
   const updates = [];
 
   for (let page = CONFIG.START_PAGE; page <= CONFIG.MAX_PAGE; page++) {
-    const url = `https://gall.dcinside.com/mgallery/board/lists/?id=${CONFIG.GALLERY_ID}&list_num=${CONFIG.LIST_NUM}&sort_type=N&exception_mode=recommend&search_head=${CONFIG.SEARCH_HEAD}&page=${page}`;
+    const url = buildTargetUrl(page);
 
     console.log(`Fetching Page ${page}: ${url}`);
 
@@ -296,4 +297,19 @@ function normalizeDate(dateStr) {
 
   // 그 외 형식은 그대로 반환
   return dateStr;
+}
+
+/**
+ * 접속 URL 생성 함수
+ */
+function buildTargetUrl(page) {
+  const params = [
+    `id=${CONFIG.GALLERY_ID}`,
+    `list_num=${CONFIG.LIST_NUM}`,
+    `sort_type=N`,
+    `exception_mode=recommend`,
+    `search_head=${CONFIG.SEARCH_HEAD}`,
+    `page=${page}`
+  ];
+  return `${CONFIG.BASE_URL}?${params.join('&')}`;
 }

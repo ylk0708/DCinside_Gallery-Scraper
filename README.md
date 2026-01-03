@@ -40,33 +40,26 @@
 
 ```javascript
 const CONFIG = {
-  GALLERY_ID: 'rollthechess', // 다른 갤러리를 원하면 ID 변경
-  SEARCH_HEAD: 40,            // 창작 탭이 40번입니다. (URL에서 확인 가능)
-  LIST_NUM: 100,              // 한 번에 가져올 목록 수
-  START_PAGE: 1,              // 시작 페이지
-  MAX_PAGE: 10,               // 검색할 최대 페이지 수
-  MIN_RECOMMEND: 100          // 필터링할 추천 수 기준
+  GALLERY_ID: 'rollthechess', // 말머리 ID 확인 필요
+  SEARCH_HEAD: 40,            // 창작 탭
+  LIST_NUM: 100,              
+  START_PAGE: 1,              
+  MAX_PAGE: 10,               
+  MIN_RECOMMEND: 100,         
+  BASE_URL: 'https://gall.dcinside.com/mgallery/board/lists/' // 일반/마이너 갤러리 구분 시 수정
 };
 ```
 
 ## 동작 구조 (Flowchart)
 
 ```mermaid
-graph TD
-    A[Start: 스크랩 시작] --> B(설정 로드: CONFIG)
-    B --> C{페이지 순회<br>Page 1 ~ MAX}
-    C -->|Next Page| D[HTTP 요청: DC Inside]
-    D --> E[HTML 파싱]
-    E --> F{게시물 필터링<br>추천수 >= 100?}
-    F -- No --> C
-    F -- Yes --> G{중복 확인}
-    G -- New --> H[신규 목록에 추가]
-    G -- Exist --> I[추천수 업데이트 목록 추가]
-    H --> C
-    I --> C
-    C -- 완료 --> J[시트 업데이트]
-    J --> K[신규 게시물 상단 삽입]
-    J --> L[기존 게시물 추천수 갱신]
-    L --> M[End: 완료 알림]
+graph LR
+    A[Start] --> B(Scrape Page)
+    B --> C{Process Data}
+    C -->|New| D[Insert Row]
+    C -->|Exist| E[Update Recommend]
+    C -->|Next| B
+    D --> F[Finish]
+    E --> F
 ```
 
