@@ -1,9 +1,5 @@
 /**
- * DC Inside Scraper for Google Apps Script
- * 
- * 1. 이 코드를 복사하여 구글 스프레드시트의 확장 프로그램 > Apps Script에 붙여넣으세요.
- * 2. 스크립트 편집기에서 'DC Scraper' 메뉴가 나타나지 않으면 페이지를 새로고침하세요.
- * 3. 'DC Inside 크롤링' > '스크랩 시작' 메뉴를 클릭하여 실행합니다.
+ * 메인 스크래퍼 (최신 데이터 수집용)
  */
 
 // 설정 변수
@@ -16,68 +12,6 @@ const CONFIG = {
   MIN_RECOMMEND: 100,         // 최소 추천 수
   BASE_URL: 'https://gall.dcinside.com/mgallery/board/lists/' // 대상 URL (마이너 갤러리 기준)
 };
-
-/**
- * 웹앱 진입점 (GET 요청 처리)
- */
-function doGet(e) {
-  return HtmlService.createTemplateFromFile('index')
-    .evaluate()
-    .setTitle('Bol Of Fame')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1');
-}
-
-/**
- * 프론트엔드에서 호출하는 데이터 조회 API (전체 데이터 반환)
- * 클라이언트 사이드에서 필터링/정렬/페이지네이션 수행
- */
-function getData() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error('Active Spreadsheet not found. Make sure the script is bound to a sheet.');
-
-    const sheet = ss.getActiveSheet();
-    const lastRow = sheet.getLastRow();
-
-    console.log('getData called. LastRow:', lastRow);
-
-    if (lastRow <= 1) {
-      console.log('No data found (only header or empty).');
-      return [];
-    }
-
-    // 데이터 전체 읽기 (헤더 제외: 2행부터)
-    const dataRange = sheet.getRange(2, 1, lastRow - 1, 6);
-    const rawData = dataRange.getValues();
-
-    // 데이터 객체로 변환
-    const items = rawData.map((row, index) => {
-      try {
-        return {
-          title: String(row[0]),
-          link: String(row[1]),
-          recommend: Number(row[2]) || 0,
-          author: String(row[3]),
-          date: String(row[4]),
-          // Date 객체는 JSON 전달 시 문자열로 변환됨을 명시적으로 처리
-          scrapedAt: row[5] instanceof Date ? row[5].toISOString() : String(row[5])
-        };
-      } catch (err) {
-        console.error('Row parsing error at index ' + index, err);
-        return null;
-      }
-    }).filter(item => item !== null); // 에러 난 행 제외
-
-    console.log(`Returning ${items.length} items.`);
-    return items;
-
-  } catch (e) {
-    console.error('getData Error:', e.toString());
-    // 에러 객체를 반환하여 클라이언트에서 알 수 있게 함 (배열이 아님)
-    return { error: e.toString() };
-  }
-}
-
 
 function scrapeDCInside() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
@@ -110,7 +44,8 @@ function scrapeDCInside() {
   const updates = [];
 
   for (let page = CONFIG.START_PAGE; page <= CONFIG.MAX_PAGE; page++) {
-    const url = buildTargetUrl(page);
+    // Utils.gs의 shared function 사용 (config 전달)
+    const url = buildTargetUrl(page, CONFIG);
 
     console.log(`Fetching Page ${page}: ${url}`);
 
@@ -194,11 +129,6 @@ function scrapeDCInside() {
 function parsePosts(html, page) {
   const posts = [];
 
-  // 각 게시물 행(tr)을 찾기 위한 정규식
-  // <tr class="ub-content us-post" ... > ... </tr>
-  // 주의: 정규식으로 HTML 파싱은 완벽하지 않으나 DC 구조상 어느 정도 패턴화되어 있음.
-  // data-no 속성이 있는 tr만 타겟팅
-
   // 전체 HTML에서 <tbody>...</tbody> 안의 내용만 추출하여 검색 범위를 줄임 (선택사항이나 권장)
   const tbodyMatch = html.match(/<tbody class="listwrap2[^>]*>([\s\S]*?)<\/tbody>/i);
   if (!tbodyMatch) return [];
@@ -220,7 +150,6 @@ function parsePosts(html, page) {
       if (recommend >= CONFIG.MIN_RECOMMEND) {
 
         // 제목 & 링크 추출
-        // <a href="/mgallery/board/view/?..." ... ><em ...></em>제목...</a>
         const titleLinkMatch = row.match(/<a\s+href="([^"]+)"[^>]*>[\s\S]*?<\/em>(.*?)<\/a>/i);
         let link = '';
         let title = '';
@@ -232,12 +161,12 @@ function parsePosts(html, page) {
         }
 
         // 작성자 추출
-        // data-nick="..." 또는 <span class='nickname ...'>...</span>
         const authorMatch = row.match(/data-nick="([^"]+)"/);
         const author = authorMatch ? authorMatch[1] : 'Unknown';
 
         const dateMatch = row.match(/<td class="gall_date"[^>]*>(.*?)<\/td>/);
         const rawDate = dateMatch ? dateMatch[1].trim() : '';
+        // Utils.gs의 normalizeDate 사용
         const date = normalizeDate(rawDate);
 
         if (title && link) {
@@ -256,60 +185,4 @@ function parsePosts(html, page) {
   });
 
   return posts;
-}
-
-/**
- * 날짜 문자열 정규화 (YYYY.MM.DD 형태로 변환)
- * - HH:mm (오늘) -> YYYY.MM.DD HH:mm
- * - MM.DD (올해) -> YYYY.MM.DD
- * - YY.MM.DD (과거/올해) -> 20YY.MM.DD
- */
-function normalizeDate(dateStr) {
-  if (!dateStr) return '';
-  dateStr = dateStr.trim();
-
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-
-  // 1. HH:mm 형식 (오늘)
-  if (dateStr.includes(':') && !dateStr.includes('.')) {
-    return `${year}.${month}.${day} ${dateStr}`;
-  }
-
-  // 2. YY.MM.DD 또는 YYYY.MM.DD
-  if (dateStr.includes('.')) {
-    const parts = dateStr.split('.');
-    if (parts.length === 3) {
-      // 연도가 2자리인 경우 (예: 24.12.31)
-      if (parts[0].length === 2) {
-        return `20${parts[0]}.${parts[1]}.${parts[2]}`;
-      }
-      // 이미 4자리인 경우 그대로 사용
-      return dateStr;
-    }
-    // 3. MM.DD 형식 (올해)
-    if (parts.length === 2) {
-      return `${year}.${parts[0]}.${parts[1]}`;
-    }
-  }
-
-  // 그 외 형식은 그대로 반환
-  return dateStr;
-}
-
-/**
- * 접속 URL 생성 함수
- */
-function buildTargetUrl(page) {
-  const params = [
-    `id=${CONFIG.GALLERY_ID}`,
-    `list_num=${CONFIG.LIST_NUM}`,
-    `sort_type=N`,
-    `exception_mode=recommend`,
-    `search_head=${CONFIG.SEARCH_HEAD}`,
-    `page=${page}`
-  ];
-  return `${CONFIG.BASE_URL}?${params.join('&')}`;
 }

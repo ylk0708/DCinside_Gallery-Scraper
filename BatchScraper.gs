@@ -57,7 +57,8 @@ function scrapeBatch2025() {
   for (let i = 0; i < BATCH_CONFIG.BATCH_SIZE; i++) {
     if (stopFlag) break;
 
-    const url = buildTargetUrl(currentPage);
+    // Utils.gs의 shared function 사용 (config 전달)
+    const url = buildTargetUrl(currentPage, BATCH_CONFIG);
     
     console.log(`Fetching Batch Page ${currentPage}...`);
     
@@ -229,53 +230,5 @@ function parsePostsBatch(html, minRecommend, targetYear) {
   return { posts, foundOlderData };
 }
 
-/**
- * 날짜 문자열 정규화 (YYYY.MM.DD 형태로 변환)
- */
-function normalizeDate(dateStr) {
-  if (!dateStr) return '';
-  dateStr = dateStr.trim();
-  
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  
-  // 1. HH:mm 형식 (오늘)
-  if (dateStr.includes(':') && !dateStr.includes('.')) {
-    return `${year}.${month}.${day} ${dateStr}`;
-  }
-  
-  // 2. YY.MM.DD 또는 YYYY.MM.DD
-  if (dateStr.includes('.')) {
-    const parts = dateStr.split('.');
-    if (parts.length === 3) {
-      // 연도가 2자리인 경우 (예: 24.12.31)
-      if (parts[0].length === 2) {
-        return `20${parts[0]}.${parts[1]}.${parts[2]}`;
-      }
-      return dateStr;
-    }
-    // 3. MM.DD 형식 (올해)
-    if (parts.length === 2) {
-      return `${year}.${parts[0]}.${parts[1]}`;
-    }
-  }
-  
-  return dateStr;
-}
 
-/**
- * 접속 URL 생성 함수 (배치용)
- */
-function buildTargetUrl(page) {
-    const params = [
-        `id=${BATCH_CONFIG.GALLERY_ID}`,
-        `list_num=${BATCH_CONFIG.LIST_NUM}`,
-        `sort_type=N`,
-        `exception_mode=recommend`,
-        `search_head=${BATCH_CONFIG.SEARCH_HEAD}`,
-        `page=${page}`
-    ];
-    return `${BATCH_CONFIG.BASE_URL}?${params.join('&')}`;
-}
+// normalizeDate와 buildTargetUrl 함수는 Utils.gs로 이동됨
