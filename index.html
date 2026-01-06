@@ -234,6 +234,41 @@
             gap: 0.25rem;
         }
 
+        /* Tabs */
+        .tabs {
+          display: flex;
+          gap: 1rem;
+          margin-bottom: 1rem;
+          border-bottom: 1px solid var(--border-color);
+        }
+  
+        .tab-btn {
+          background: none;
+          border: none;
+          padding: 0.75rem 0.25rem;
+          font-size: 1rem;
+          font-weight: 500;
+          color: var(--text-sub);
+          cursor: pointer;
+          position: relative;
+          transition: color 0.2s;
+        }
+  
+        .tab-btn.active {
+          color: var(--accent-color);
+          font-weight: 600;
+        }
+  
+        .tab-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: var(--accent-color);
+        }
+
         /* Pagination */
         .pagination {
             margin-top: 2rem;
@@ -323,6 +358,11 @@
                 <span class="total-count" id="totalCount">Loading...</span>
             </div>
 
+            <div class="tabs">
+                <button class="tab-btn active" data-type="fame">창작 (Fame)</button>
+                <button class="tab-btn" data-type="literature">볼문학 (Literature)</button>
+            </div>
+
             <div class="controls">
                 <div class="search-box">
                     <span class="search-icon">🔍</span>
@@ -372,7 +412,8 @@
             pageSize: 20,
             sortBy: 'date',
             minRecommend: 0,
-            searchQuery: ''
+            searchQuery: '',
+            currentSheet: 'fame' // Default sheet
         };
 
         // DOM Elements
@@ -432,6 +473,27 @@
                     window.scrollTo({ top: 0, behavior: 'smooth' });
                 }
             });
+
+            // Tabs
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const type = e.target.dataset.type;
+                    if (state.currentSheet === type) return;
+
+                    // Update State
+                    state.currentSheet = type;
+                    state.page = 1;
+                    state.allData = [];
+                    state.filteredData = [];
+
+                    // Update UI (Tabs)
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    e.target.classList.add('active');
+
+                    // Fetch Data
+                    fetchData();
+                });
+            });
         }
 
         function fetchData() {
@@ -441,7 +503,7 @@
             google.script.run
                 .withSuccessHandler(onSuccess)
                 .withFailureHandler(onFailure)
-                .getData();
+                .getData(state.currentSheet);
         }
 
         function onSuccess(items) {

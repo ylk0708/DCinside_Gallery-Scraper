@@ -6,6 +6,9 @@
  * 3. 'DC Inside 크롤링' > '스크랩 시작' 메뉴를 클릭하여 실행합니다.
  */
 
+// 시트 이름 상수 정의
+const SHEET_NAME_DATA = 'Bol of Fame'; // 게시물 데이터 시트
+
 /**
  * 웹앱 진입점 (GET 요청 처리)
  */
@@ -19,16 +22,26 @@ function doGet(e) {
 /**
  * 프론트엔드에서 호출하는 데이터 조회 API (전체 데이터 반환)
  * 클라이언트 사이드에서 필터링/정렬/페이지네이션 수행
+ * @param {string} sheetType - 'fame' (default) or 'literature'
  */
-function getData() {
+function getData(sheetType) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    if (!ss) throw new Error('Active Spreadsheet not found. Make sure the script is bound to a sheet.');
+    if (!ss) throw new Error('Active Spreadsheet not found.');
 
-    const sheet = ss.getActiveSheet();
+    // 시트 선택 로직
+    const targetSheetName = (sheetType === 'literature') ? 'Bol of Literature' : 'Bol of Fame';
+    
+    // 특정 이름의 시트를 가져옴 (없으면 에러)
+    const sheet = ss.getSheetByName(targetSheetName);
+    if (!sheet) {
+      // 시트가 없으면 빈 배열 반환 (에러보다는 데이터 없음 처리)
+      console.warn(`Sheet "${targetSheetName}" not found. Returning empty list.`);
+      return [];
+    }
+
     const lastRow = sheet.getLastRow();
-
-    console.log('getData called. LastRow:', lastRow);
+    console.log(`getData('${sheetType}') called. Target: ${targetSheetName}, LastRow: ${lastRow}`);
 
     if (lastRow <= 1) {
       console.log('No data found (only header or empty).');
@@ -38,6 +51,7 @@ function getData() {
     // 데이터 전체 읽기 (헤더 제외: 2행부터)
     const dataRange = sheet.getRange(2, 1, lastRow - 1, 6);
     const rawData = dataRange.getValues();
+
 
     // 데이터 객체로 변환
     const items = rawData.map((row, index) => {

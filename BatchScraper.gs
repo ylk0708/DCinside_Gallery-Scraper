@@ -6,8 +6,8 @@
  * 3. 메뉴에서 'DC Inside 2025 수집' > '과거 데이터 수집 시작'을 클릭하세요.
  */
 
-// 배치 설정
-const BATCH_CONFIG = {
+// 배치 설정 (창작/Bol of Fame)
+const BATCH_CONFIG_FAME = {
   GALLERY_ID: 'rollthechess',
   SEARCH_HEAD: 40,
   LIST_NUM: 100,
@@ -17,21 +17,68 @@ const BATCH_CONFIG = {
   BASE_URL: 'https://gall.dcinside.com/mgallery/board/lists/'
 };
 
-function onOpenBatch() {
-  const ui = SpreadsheetApp.getUi();
-  ui.createMenu('DC Inside 2025 수집')
-    .addItem('과거 데이터 수집 시작 (이어하기)', 'scrapeBatch2025')
-    .addItem('진행 상황 초기화', 'resetBatchProgress')
-    .addToUi();
+// 배치 설정 (Bol of Literature)
+const BATCH_CONFIG_LIT = {
+  ...BATCH_CONFIG_FAME,
+  SEARCH_HEAD: 130,     // 말머리 130: 볼문학
+  MIN_RECOMMEND: 50     // 최소 추천 수 50
+};
+
+/**
+ * 창작(Bol of Fame) 배치 스크랩 실행
+ */
+function scrapeBatchBolFame() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  // 기존 키 'BATCH_LAST_PAGE' 유지
+  executeBatchScraping(BATCH_CONFIG_FAME, 'BATCH_LAST_PAGE', sheet);
 }
 
-// 트리거 등으로 자동 실행되지 않도록 함수명 분리
-function scrapeBatch2025() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+/**
+ * Bol of Literature 배치 스크랩 실행
+ */
+function scrapeBatchBolLiterature() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = 'Bol of Literature';
+  let sheet = ss.getSheetByName(sheetName);
+  
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+    sheet.appendRow(['제목', '링크', '추천수', '작성자', '작성일', '수집일시']);
+    sheet.setFrozenRows(1);
+    console.log(`Created new sheet: ${sheetName}`);
+  }
+  
+  executeBatchScraping(BATCH_CONFIG_LIT, 'BATCH_LAST_PAGE_LIT', sheet);
+}
+
+
+/**
+ * 창작 진행 상황 초기화
+ */
+function resetBatchProgressFame() {
+  resetBatchProgressInternal('BATCH_LAST_PAGE', '창작');
+}
+
+/**
+ * Bol 문학 진행 상황 초기화
+ */
+function resetBatchProgressLit() {
+  resetBatchProgressInternal('BATCH_LAST_PAGE_LIT', 'Bol 문학');
+}
+
+function resetBatchProgressInternal(key, title) {
+  PropertiesService.getScriptProperties().deleteProperty(key);
+  console.log(`${title} 진행 상황이 초기화되었습니다.`);
+}
+
+/**
+ * 공통 배치 스크래핑 로직
+ */
+function executeBatchScraping(config, progressKey, sheet) {
   const scriptProperties = PropertiesService.getScriptProperties();
   
   // 저장된 마지막 페이지 불러오기 (없으면 1페이지부터)
-  let currentPage = parseInt(scriptProperties.getProperty('BATCH_LAST_PAGE')) || 1;
+  let currentPage = parseInt(scriptProperties.getProperty(progressKey)) || 1;
   const startPage = currentPage;
   
   // 헤더 확인 및 추가
@@ -51,14 +98,14 @@ function scrapeBatch2025() {
   }
 
   let collectedCount = 0;
-  let stopFlag = false; // 2024년 데이터를 만나면 종료하기 위한 플래그
+  let stopFlag = false; // 타겟 연도 이전 데이터를 만나면 종료하기 위한 플래그
 
   // 배치 사이즈만큼 반복
-  for (let i = 0; i < BATCH_CONFIG.BATCH_SIZE; i++) {
+  for (let i = 0; i < config.BATCH_SIZE; i++) {
     if (stopFlag) break;
 
-    // Utils.gs의 shared function 사용 (config 전달)
-    const url = buildTargetUrl(currentPage, BATCH_CONFIG);
+    // Utils.gs의 shared function 사용
+    const url = buildTargetUrl(currentPage, config);
     
     console.log(`Fetching Batch Page ${currentPage}...`);
     
@@ -75,12 +122,12 @@ function scrapeBatch2025() {
       const html = response.getContentText();
       
       // 게시물 파싱
-      const result = parsePostsBatch(html, BATCH_CONFIG.MIN_RECOMMEND, BATCH_CONFIG.TARGET_YEAR);
+      const result = parsePostsBatch(html, config.MIN_RECOMMEND, config.TARGET_YEAR);
       
-      // 2025년 이전 데이터가 나오면 중단 플래그 설정
+      // 타겟 연도 이전 데이터가 나오면 중단 플래그 설정
       if (result.foundOlderData) {
         stopFlag = true;
-        console.log(`Page ${currentPage}에서 ${BATCH_CONFIG.TARGET_YEAR}년 이전 데이터 발견. 수집을 종료합니다.`);
+        console.log(`Page ${currentPage}에서 ${config.TARGET_YEAR}년 이전 데이터 발견. 수집을 종료합니다.`);
       }
       
       const newPosts = [];
@@ -107,36 +154,25 @@ function scrapeBatch2025() {
       // 마지막 페이지 업데이트
       if (!stopFlag) {
         currentPage++;
-        scriptProperties.setProperty('BATCH_LAST_PAGE', currentPage.toString());
+        scriptProperties.setProperty(progressKey, currentPage.toString());
       }
 
       Utilities.sleep(1000); // 1초 대기
       
     } catch (e) {
       console.error(`Error on page ${currentPage}: ${e.toString()}`);
-      SpreadsheetApp.getUi().alert(`오류 발생 (페이지 ${currentPage}): ${e.toString()}`);
+      console.log(`오류 발생 (페이지 ${currentPage}): ${e.toString()}`);
       break; // 오류 발생 시 중단
     }
   }
   
   // 결과 알림
-  const ui = SpreadsheetApp.getUi();
   if (stopFlag) {
-     ui.alert(`수집 완료/종료!\n\n${BATCH_CONFIG.TARGET_YEAR}년 데이터 수집을 모두 마쳤습니다.\n마지막 페이지: ${currentPage}\n총 ${collectedCount}개 추가됨.`);
+     console.log(`수집 완료/종료! ${config.TARGET_YEAR}년 데이터 수집을 모두 마쳤습니다. 마지막 페이지: ${currentPage}, 총 ${collectedCount}개 추가됨.`);
      // 초기화
-     scriptProperties.deleteProperty('BATCH_LAST_PAGE');
+     scriptProperties.deleteProperty(progressKey);
   } else {
-     ui.alert(`배치 완료 (페이지 ${startPage} ~ ${currentPage - 1})\n\n새로 추가된 게시물: ${collectedCount}개\n\n아직 2025년 데이터가 남았을 수 있습니다.\n메뉴에서 '과거 데이터 수집 시작'을 다시 눌러주세요.`);
-  }
-}
-
-function resetBatchProgress() {
-  const ui = SpreadsheetApp.getUi();
-  const response = ui.alert('경고', '진행 상황을 초기화하시겠습니까? 다시 1페이지부터 시작하게 됩니다.', ui.ButtonSet.YES_NO);
-  
-  if (response == ui.Button.YES) {
-    PropertiesService.getScriptProperties().deleteProperty('BATCH_LAST_PAGE');
-    ui.alert('초기화되었습니다.');
+     console.log(`배치 완료 (페이지 ${startPage} ~ ${currentPage - 1}). 새로 추가된 게시물: ${collectedCount}개. 아직 ${config.TARGET_YEAR}년 데이터가 남았을 수 있습니다. 다시 실행해주세요.`);
   }
 }
 
@@ -153,38 +189,31 @@ function parsePostsBatch(html, minRecommend, targetYear) {
   if (!rows) return { posts: [], foundOlderData: false };
   
   const now = new Date();
-  const currentYear = now.getFullYear(); // 2025 (시스템 시간 가정)
+  const currentYear = now.getFullYear(); 
 
   rows.forEach(row => {
     try {
       // 날짜 추출
-      // <td class="gall_date" ...>12.31</td> 또는 13:22
       const dateMatch = row.match(/<td class="gall_date"[^>]*>(.*?)<\/td>/);
       let dateStr = dateMatch ? dateMatch[1].trim() : '';
       let postYear = currentYear;
       
       // 날짜 파싱 로직
       if (dateStr.includes(':')) {
-        // HH:mm 형식이면 오늘(또는 최근)로 간주 -> 2025
         postYear = currentYear;
-      } else if (dateStr.includes('.')) { // YY.MM.DD 또는 MM.DD
+      } else if (dateStr.includes('.')) { 
          const parts = dateStr.split('.');
          if (parts.length === 3) {
-           // 24.12.31 (YY.MM.DD)
            postYear = 2000 + parseInt(parts[0], 10);
          } else {
-           // 12.31 (MM.DD) -> 같은 해로 간주 (단, 1월에 12월글이 보이면 작년일 수 있으나 여기선 단순화)
-           // 보통 DC는 올해 글은 MM.DD, 작년 글은 YY.MM.DD로 표시함
-           // 따라서 점이 있지만 년도가 없으면 올해로 간주
            postYear = currentYear;
          }
-      } else if (dateStr.includes('/')) { // 가끔 슬래시 쓰는 경우 24/12/31
+      } else if (dateStr.includes('/')) { 
          const parts = dateStr.split('/');
-         if (parts.length === 3) { // YY/MM/DD
+         if (parts.length === 3) { 
             postYear = 2000 + parseInt(parts[0], 10);
          }
       } else if (dateStr.includes('-')) {
-          // YY-MM-DD
          const parts = dateStr.split('-');
          if (parts.length === 3) { 
             postYear = 2000 + parseInt(parts[0], 10);
@@ -194,9 +223,9 @@ function parsePostsBatch(html, minRecommend, targetYear) {
       // 연도 필터링
       if (postYear < targetYear) {
         foundOlderData = true;
-        return; // 현재 루프 건너뜀 (이미 older flag 켰으니 이후 루프에서도 계속 older일 가능성 높음)
+        return; 
       } else if (postYear > targetYear) {
-        return; // 미래 날짜? 무시
+        return; 
       }
 
       // 추천수 체크
@@ -207,7 +236,6 @@ function parsePostsBatch(html, minRecommend, targetYear) {
         const titleLinkMatch = row.match(/<a\s+href="([^"]+)"[^>]*>[\s\S]*?<\/em>(.*?)<\/a>/i);
         if (titleLinkMatch) {
           const link = 'https://gall.dcinside.com' + titleLinkMatch[1].replace(/&amp;/g, '&');
-          // 스포일러 태그 및 기타 HTML 태그 제거
           const title = titleLinkMatch[2].replace(/<span class="spoiler">.*?<\/span>/g, '').replace(/<\/?[^>]+(>|$)/g, '').trim();
           
           const authorMatch = row.match(/data-nick="([^"]+)"/);
@@ -230,5 +258,5 @@ function parsePostsBatch(html, minRecommend, targetYear) {
   return { posts, foundOlderData };
 }
 
-
 // normalizeDate와 buildTargetUrl 함수는 Utils.gs로 이동됨
+
